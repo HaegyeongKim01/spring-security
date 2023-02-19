@@ -2,6 +2,7 @@ package com.prgms.devcourse.configures;
 
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -11,6 +12,20 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
+
+    /**
+     * 로그인 사용자 추가
+     * @param auth
+     * @throws Exception 예외처리
+     */
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication()
+                .withUser("user").password("{noop}user123").roles("USER")
+                .and()
+                .withUser("admin").password("{noop}admin123").roles("ADMIN")
+                ;
+    }
 
     /**
      * Override 하여 우리가 원하는대로 security customizing 가능
@@ -43,7 +58,10 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 .logoutSuccessUrl("/")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
-
+               .and()
+            .formLogin()
+                .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
+                 .permitAll()
         ;
     }
 
