@@ -59,6 +59,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
                .and()
+            .rememberMe()  //cookie기반의 자동로그인
+                .rememberMeParameter("remember-me")   //html checkBox태그 name에 일치
+                .tokenValiditySeconds(300)
         ;
     }
 
