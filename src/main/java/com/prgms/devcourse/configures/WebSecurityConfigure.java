@@ -59,9 +59,6 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
                .and()
-            .formLogin()
-                .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
-                 .permitAll()
         ;
     }
 
