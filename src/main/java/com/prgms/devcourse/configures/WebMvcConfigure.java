@@ -13,5 +13,7 @@ public class WebMvcConfigure implements WebMvcConfigurer {
         registry.addViewController("/").setViewName("index");
         // /me path로 온 경우 template/me.html로 lendering 해라
         registry.addViewController("/me").setViewName("me");
+
+        registry.addViewController("/admin").setViewName("admin");
     }
 }
