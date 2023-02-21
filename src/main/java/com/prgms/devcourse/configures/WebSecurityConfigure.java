@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -89,7 +90,18 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
              */
             .exceptionHandling()
                 .accessDeniedHandler(accessDeniedHandler())
-
+                .and()
+            /**
+            * 세션 설정
+            */
+            .sessionManagement()
+                .sessionFixation().changeSessionId()
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) //세션 전략 설정
+                .invalidSessionUrl("/") //유효하지 않은 세션이 감지된 경우 이동할 url 설정
+                .maximumSessions(1)  //동시 로그인 가능한 최대 세션 개수
+                    .maxSessionsPreventsLogin(false) //최대 세션 개수가 된 경우 false -> 막는다.
+                    .and()
+                .and()
 //             굳이 설정을 따로 하진 않고 이런 경우가 있다 정도만 알 것
 //            .anonymous() //anonymous : 로그인이 되지 않은 경우
 //                .principal("thisIsAnnoymousUser")  //default: Annoymous 대신 넣을 이름
