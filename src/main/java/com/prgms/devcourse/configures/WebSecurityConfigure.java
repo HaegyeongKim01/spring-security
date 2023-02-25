@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.expression.SecurityExpressionHandler;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -14,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -38,8 +41,21 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         auth.inMemoryAuthentication()
                 .withUser("user").password("{noop}user123").roles("USER")
                 .and()
-                .withUser("admin").password("{noop}admin123").roles("ADMIN")
+                .withUser("admin01").password("{noop}admin123").roles("ADMIN")
+                .and()
+                .withUser("admin02").password("{noop}admin123").roles("ADMIN")
                 ;
+    }
+
+    /**
+     * Access Denied
+     * @return 만든 CustomWebSecurityHandler 반환
+     */
+    public SecurityExpressionHandler<FilterInvocation> securityExpressionHandler() {
+        return new CustomWebSecurityExpressionHandler(
+                new AuthenticationTrustResolverImpl(),
+                "ROLE_"
+        );
     }
 
     /**
@@ -62,8 +78,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         http
             .authorizeRequests()//공개(인증영역) 리소스 혹은 보호받는 리소스(익명영역)에 대한 세부 설정
                 .antMatchers("/me").hasAnyRole("USER", "ADMIN") //path: me인 경우 요청하는 사용자가 USER 혹은 ADMIN권한을 가지고 있어야 한다.
-                .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated()")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록
+                .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated() and oddAdmin")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록  //oddAdmin admin01admin02사용
                 .anyRequest().permitAll()//위의 경우를 제외하고는 모두 permit
+                .expressionHandler(securityExpressionHandler())    //우리가 정의한 securityExpressionHandler를 넣는다.
                 .and()
             .formLogin()
                 .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
@@ -94,6 +111,7 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
             /**
             * 세션 설정
             */
+            /*
             .sessionManagement()
                 .sessionFixation().changeSessionId()
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) //세션 전략 설정
@@ -102,6 +120,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                     .maxSessionsPreventsLogin(false) //최대 세션 개수가 된 경우 false -> 막는다.
                     .and()
                 .and()
+
+             */
+
 //             굳이 설정을 따로 하진 않고 이런 경우가 있다 정도만 알 것
 //            .anonymous() //anonymous : 로그인이 되지 않은 경우
 //                .principal("thisIsAnnoymousUser")  //default: Annoymous 대신 넣을 이름
