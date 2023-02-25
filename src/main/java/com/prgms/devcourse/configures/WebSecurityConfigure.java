@@ -5,8 +5,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.security.access.AccessDecisionManager;
+import org.springframework.security.access.AccessDecisionVoter;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.expression.SecurityExpressionHandler;
+import org.springframework.security.access.vote.UnanimousBased;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,12 +21,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.access.expression.WebExpressionVoter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -47,15 +53,12 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 ;
     }
 
-    /**
-     * Access Denied
-     * @return 만든 CustomWebSecurityHandler 반환
-     */
-    public SecurityExpressionHandler<FilterInvocation> securityExpressionHandler() {
-        return new CustomWebSecurityExpressionHandler(
-                new AuthenticationTrustResolverImpl(),
-                "ROLE_"
-        );
+    @Bean
+    public AccessDecisionManager accessDecisionManager() {
+        List<AccessDecisionVoter<?>> voters = new ArrayList<>();
+        voters.add(new WebExpressionVoter());
+        voters.add(new OddAdminVoter(new AntPathRequestMatcher("/admin")));
+        return new UnanimousBased(voters);
     }
 
     /**
@@ -78,9 +81,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         http
             .authorizeRequests()//공개(인증영역) 리소스 혹은 보호받는 리소스(익명영역)에 대한 세부 설정
                 .antMatchers("/me").hasAnyRole("USER", "ADMIN") //path: me인 경우 요청하는 사용자가 USER 혹은 ADMIN권한을 가지고 있어야 한다.
-                .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated() and oddAdmin")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록  //oddAdmin admin01admin02사용
+                .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated()")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록
                 .anyRequest().permitAll()//위의 경우를 제외하고는 모두 permit
-                .expressionHandler(securityExpressionHandler())    //우리가 정의한 securityExpressionHandler를 넣는다.
+                .accessDecisionManager(accessDecisionManager())  // accessDecisionManager()를 통해서 생성되는 DecisionManage를 넘긴다.
                 .and()
             .formLogin()
                 .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
