@@ -15,5 +15,7 @@ public class WebMvcConfigure implements WebMvcConfigurer {
         registry.addViewController("/me").setViewName("me");
 
         registry.addViewController("/admin").setViewName("admin");
+        //send url 요청 처리할 수 있도록 설정
+        registry.addViewController("/send").setViewName("send");
     }
 }

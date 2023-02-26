@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="no-cache"/>
+    <title th:text="#{html.title}"></title>
+    <link rel = "shortcut icon" type = "image/x-icon" th:gref="@{/assets/icons/favi.png}">
+</head>
+<body>
+send page
+
+<!-- send url 호출 -->
+<!-- POST를 요청하는 페이지이기에 내부적으로 Csrf토큰값을 필요로한다. -->
+<form th:action="@{/send}" method = "post">
+    <input type ="text" name = "nickname" plcaholder = "input yout nickname" />
+    <button type = "submit"> submit </button>
+</form>
+
+</body>
+</html>
