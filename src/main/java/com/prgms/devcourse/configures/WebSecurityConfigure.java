@@ -106,6 +106,11 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 .tokenValiditySeconds(300)
                 .and()
             /**
+             * BasicAuthenticationFilter 적용
+             */
+            .httpBasic()
+                .and()
+            /**
             * AccessDenied 예외처리 핸들러
              */
             .exceptionHandling()
