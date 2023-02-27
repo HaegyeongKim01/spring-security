@@ -5,31 +5,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import org.springframework.security.access.AccessDecisionManager;
-import org.springframework.security.access.AccessDecisionVoter;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.expression.SecurityExpressionHandler;
-import org.springframework.security.access.vote.UnanimousBased;
-import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.FilterInvocation;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.access.expression.WebExpressionVoter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import javax.sql.DataSource;
+
 
 @Configuration
 @EnableWebSecurity
@@ -38,37 +29,61 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * 로그인 사용자 추가
-     * @param auth
-     * @throws Exception 예외처리
-     */
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .withUser("user").password("{noop}user123").roles("USER")
-                .and()
-                .withUser("admin01").password("{noop}admin123").roles("ADMIN")
-                .and()
-                .withUser("admin02").password("{noop}admin123").roles("ADMIN")
-                ;
-    }
-
-    @Bean
-    public AccessDecisionManager accessDecisionManager() {
-        List<AccessDecisionVoter<?>> voters = new ArrayList<>();
-        voters.add(new WebExpressionVoter());
-        voters.add(new OddAdminVoter(new AntPathRequestMatcher("/admin")));
-        return new UnanimousBased(voters);
-    }
-
-    /**
      * Override 하여 우리가 원하는대로 security customizing 가능
      * @param web  WebSecurity 클래스는 필터 체인 관련 전역 설정을 처리할 수 있는 API 제공
      * @ignoring() : 지정된 path에 mapping되는 요청은 spring security filter chain을 태우지 않겠다.
      */
     @Override
     public void configure(WebSecurity web) {
-        web.ignoring().antMatchers("/assets/**");
+        web.ignoring().antMatchers("/assets/**", "/h2-console/**");
+    }
+
+    /**
+     *
+     * @param dataSource Datasource
+     * @return UserDetailsService JdbcDaoImpl
+     */
+    @Bean
+    public UserDetailsService userDetailsService(DataSource dataSource) {
+        JdbcDaoImpl jdbcDao = new JdbcDaoImpl();
+        jdbcDao.setDataSource(dataSource);  //Datasource
+        jdbcDao.setEnableAuthorities(false);
+        jdbcDao.setEnableGroups(true);   //true로 하여 사용자의 권한 목록을 가져오도록 한다.
+        jdbcDao.setUsersByUsernameQuery(
+                "SELECT " +
+                    "login_id, passwd, true " +
+                " FROM " +
+                    "USERS " +
+                "WHERE " +
+                    "login_id = ?"
+        );
+        jdbcDao.setGroupAuthoritiesByUsernameQuery(
+                "SELECT " +
+                    "u.login_id, g.name, p.name " +
+                "FROM USERS u JOIN groups g ON u.group_id = g.id " +
+                    "LEFT JOIN group_permission gp ON g.id = gp.group_id " +
+                    "JOIN permissions p ON p.id = gp.permission_id " +
+                "WHERE u.login_id = ?"
+        );
+
+        //SELECT login_id, passwd FROM USERS where login_id = 'user'
+        /*
+        SELECT u.login_id, g.name, p.name
+        FROM USERS u JOIN groups g ON u.group_id = g.id
+        LEFT JOIN group_permission gp ON g.id = gp.group_id
+        JOIN permissions p ON p.id = gp.permission_id
+        WHERE u.login_id = 'admin'
+        */
+        return jdbcDao;
+    }
+
+    /**
+     * password Encoder 명시적으로 설정
+     * @return BCryptPasswordEncoder
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     /**
@@ -83,7 +98,6 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
                 .antMatchers("/me").hasAnyRole("USER", "ADMIN") //path: me인 경우 요청하는 사용자가 USER 혹은 ADMIN권한을 가지고 있어야 한다.
                 .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated()")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록
                 .anyRequest().permitAll()//위의 경우를 제외하고는 모두 permit
-                .accessDecisionManager(accessDecisionManager())  // accessDecisionManager()를 통해서 생성되는 DecisionManage를 넘긴다.
                 .and()
             .formLogin()
                 .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
