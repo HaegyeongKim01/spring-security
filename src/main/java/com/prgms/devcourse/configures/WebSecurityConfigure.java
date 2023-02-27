@@ -2,9 +2,11 @@ package com.prgms.devcourse.configures;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,6 +30,43 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    private DataSource dataSource;
+
+    //jdbcDao - remember-me 활성화의 경우까지 처리하기 위해
+    @Autowired
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    /**
+     * jdbcDao - remember-me 활성화의 경우까지 처리하기 위해 사용
+     * @param auth AuthenticationManagerBuilder : imMemoryAuthentication jdbcAuthentication 등이 존재
+     * @throws Exception
+     */
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.jdbcAuthentication()
+                .dataSource(dataSource)
+                .usersByUsernameQuery(
+                        "SELECT " +
+                            "login_id, passwd, true " +
+                        " FROM " +
+                            "USERS " +
+                        "WHERE " +
+                            "login_id = ?"
+                )
+                .groupAuthoritiesByUsername(
+                "SELECT " +
+                            "u.login_id, g.name, p.name " +
+                        "FROM " +
+                            "USERS u JOIN groups g ON u.group_id = g.id " +
+                            "LEFT JOIN group_permission gp ON g.id = gp.group_id " +
+                            "JOIN permissions p ON p.id = gp.permission_id " +
+                        "WHERE u.login_id = ?"
+                )
+                .getUserDetailsService().setEnableAuthorities(false);
+    }
+
     /**
      * Override 하여 우리가 원하는대로 security customizing 가능
      * @param web  WebSecurity 클래스는 필터 체인 관련 전역 설정을 처리할 수 있는 API 제공
@@ -36,45 +75,6 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) {
         web.ignoring().antMatchers("/assets/**", "/h2-console/**");
-    }
-
-    /**
-     *
-     * @param dataSource Datasource
-     * @return UserDetailsService JdbcDaoImpl
-     */
-    @Bean
-    public UserDetailsService userDetailsService(DataSource dataSource) {
-        JdbcDaoImpl jdbcDao = new JdbcDaoImpl();
-        jdbcDao.setDataSource(dataSource);  //Datasource
-        jdbcDao.setEnableAuthorities(false);
-        jdbcDao.setEnableGroups(true);   //true로 하여 사용자의 권한 목록을 가져오도록 한다.
-        jdbcDao.setUsersByUsernameQuery(
-                "SELECT " +
-                    "login_id, passwd, true " +
-                " FROM " +
-                    "USERS " +
-                "WHERE " +
-                    "login_id = ?"
-        );
-        jdbcDao.setGroupAuthoritiesByUsernameQuery(
-                "SELECT " +
-                    "u.login_id, g.name, p.name " +
-                "FROM USERS u JOIN groups g ON u.group_id = g.id " +
-                    "LEFT JOIN group_permission gp ON g.id = gp.group_id " +
-                    "JOIN permissions p ON p.id = gp.permission_id " +
-                "WHERE u.login_id = ?"
-        );
-
-        //SELECT login_id, passwd FROM USERS where login_id = 'user'
-        /*
-        SELECT u.login_id, g.name, p.name
-        FROM USERS u JOIN groups g ON u.group_id = g.id
-        LEFT JOIN group_permission gp ON g.id = gp.group_id
-        JOIN permissions p ON p.id = gp.permission_id
-        WHERE u.login_id = 'admin'
-        */
-        return jdbcDao;
     }
 
     /**
