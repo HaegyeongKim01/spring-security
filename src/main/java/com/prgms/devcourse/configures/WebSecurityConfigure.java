@@ -1,5 +1,6 @@
 package com.prgms.devcourse.configures;
 
+import com.prgms.devcourse.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,16 +14,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.sql.DataSource;
-
 
 @Configuration
 @EnableWebSecurity
@@ -30,41 +27,25 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private DataSource dataSource;
+    private UserService userService;
 
-    //jdbcDao - remember-me 활성화의 경우까지 처리하기 위해
+    /**
+     * setter를 통해서 DI 받는다.
+     * @param userService UserService
+     */
     @Autowired
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public void setUserService(UserService userService) {
+        this.userService = userService;
     }
 
     /**
-     * jdbcDao - remember-me 활성화의 경우까지 처리하기 위해 사용
-     * @param auth AuthenticationManagerBuilder : imMemoryAuthentication jdbcAuthentication 등이 존재
-     * @throws Exception
+     * JPA사용하는 경우 method안에서 쿼리를 제공할 필요없다.
+     * @param auth AuthenticationManagerBuilder
+     * @throws Exception Exception
      */
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.jdbcAuthentication()
-                .dataSource(dataSource)
-                .usersByUsernameQuery(
-                        "SELECT " +
-                            "login_id, passwd, true " +
-                        " FROM " +
-                            "USERS " +
-                        "WHERE " +
-                            "login_id = ?"
-                )
-                .groupAuthoritiesByUsername(
-                "SELECT " +
-                            "u.login_id, g.name, p.name " +
-                        "FROM " +
-                            "USERS u JOIN groups g ON u.group_id = g.id " +
-                            "LEFT JOIN group_permission gp ON g.id = gp.group_id " +
-                            "JOIN permissions p ON p.id = gp.permission_id " +
-                        "WHERE u.login_id = ?"
-                )
-                .getUserDetailsService().setEnableAuthorities(false);
+        auth.userDetailsService(userService);   //JPA 사용하여 JdbcDaoImpl 구현
     }
 
     /**
