@@ -1,5 +1,6 @@
 package com.prgms.devcourse.configures;
 
+import com.prgms.devcourse.jwt.Jwt;
 import com.prgms.devcourse.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,14 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    private JwtConfigure jwtConfigure;  //Jwt를 Bean으로 등록하려면 JwtConfigure 필요하다
+
     private UserService userService;
+
+    @Autowired
+    public void setJwtConfigure(JwtConfigure jwtConfigure) {
+        this.jwtConfigure = jwtConfigure;
+    }
 
     /**
      * setter를 통해서 DI 받는다.
@@ -56,6 +64,19 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) {
         web.ignoring().antMatchers("/assets/**", "/h2-console/**");
+    }
+
+    /**
+     * Jwt 객체 Bean으로 등록
+     * @return Jwt
+     */
+    @Bean
+    public Jwt jwt() {
+        return new Jwt(
+                jwtConfigure.getIssuer(),
+                jwtConfigure.getClientSecret(),
+                jwtConfigure.getExpirySeconds()
+        );
     }
 
     @Bean
@@ -109,9 +130,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
             .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)  //Stateless!! HTTP session 사용하지 않겠다
                 .and()
-            /**
-             * 예외처리 핸들러
-             */
+                /*
+                  예외처리 핸들러
+                 */
             .exceptionHandling()   //AccessDenied 예외처리 핸들러
                 .accessDeniedHandler(accessDeniedHandler())
                 .and()
