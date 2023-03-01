@@ -12,12 +12,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -58,81 +58,6 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         web.ignoring().antMatchers("/assets/**", "/h2-console/**");
     }
 
-    /**
-     * password Encoder 명시적으로 설정
-     * @return BCryptPasswordEncoder
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    /**
-     *
-     * @param http HttpSecurity:  세부적인 웹 보안기능 설정을 처리할 수 있는 APi를 제공
-     * @throws Exception
-     */
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-            .authorizeRequests()//공개(인증영역) 리소스 혹은 보호받는 리소스(익명영역)에 대한 세부 설정
-                .antMatchers("/me").hasAnyRole("USER", "ADMIN") //path: me인 경우 요청하는 사용자가 USER 혹은 ADMIN권한을 가지고 있어야 한다.
-                .antMatchers("/admin").access("hasRole('ADMIN') and isFullyAuthenticated()")  //ADMIN권한이 있어야 이 page를 호출할 수 있도록
-                .anyRequest().permitAll()//위의 경우를 제외하고는 모두 permit
-                .and()
-            .formLogin()
-                .defaultSuccessUrl("/")  //로그인 성공 경우의 path지정
-                .permitAll()
-                .and()
-            /**
-             * 로그아웃 설정
-             */
-            .logout()
-                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))   //default로 /logout 이 설정되어있다. 밑의 코드들 역시 마찬가지
-                .logoutSuccessUrl("/")
-                .invalidateHttpSession(true)
-                .clearAuthentication(true)
-               .and()
-            /**
-            * remember me 설정
-             */
-            .rememberMe()  //cookie기반의 자동로그인
-                .rememberMeParameter("remember-me")   //html checkBox태그 name에 일치
-                .tokenValiditySeconds(300)
-                .and()
-            /**
-             * BasicAuthenticationFilter 적용
-             */
-            .httpBasic()
-                .and()
-            /**
-            * AccessDenied 예외처리 핸들러
-             */
-            .exceptionHandling()
-                .accessDeniedHandler(accessDeniedHandler())
-                .and()
-            /**
-            * 세션 설정
-            */
-            /*
-            .sessionManagement()
-                .sessionFixation().changeSessionId()
-                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) //세션 전략 설정
-                .invalidSessionUrl("/") //유효하지 않은 세션이 감지된 경우 이동할 url 설정
-                .maximumSessions(1)  //동시 로그인 가능한 최대 세션 개수
-                    .maxSessionsPreventsLogin(false) //최대 세션 개수가 된 경우 false -> 막는다.
-                    .and()
-                .and()
-
-             */
-
-//             굳이 설정을 따로 하진 않고 이런 경우가 있다 정도만 알 것
-//            .anonymous() //anonymous : 로그인이 되지 않은 경우
-//                .principal("thisIsAnnoymousUser")  //default: Annoymous 대신 넣을 이름
-//                .authorities("ROLE_ANNOYMOUS", "ROLE_UNKNOWN");
-        ;
-    }
-
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         return (httpServletRequest, httpServletResponse, e) -> {
@@ -146,7 +71,53 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
             httpServletResponse.getWriter().close();
         };
 
-
     }
+
+    /**
+     * password Encoder 명시적으로 설정
+     * @return BCryptPasswordEncoder
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    /**
+     *
+     * @param http HttpSecurity:  세부적인 웹 보안기능 설정을 처리할 수 있는 APi를 제공
+     * @throws Exception -
+     */
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()//공개(인증영역) 리소스 혹은 보호받는 리소스(익명영역)에 대한 세부 설정
+                .antMatchers("/api/user/me").hasAnyRole("USER", "ADMIN")
+                .anyRequest().permitAll()//위의 경우를 제외하고는 모두 permit
+                .and()
+            .csrf()   //page기반 서비스가 아니기에 disable로
+                .disable()
+            .headers()
+                .disable()
+            .formLogin()
+                .disable()
+            .httpBasic()   //BasicAuthenticationFilter 적용
+                .disable()
+            .rememberMe()
+                .disable()
+            .logout()
+                .disable()
+            .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)  //Stateless!! HTTP session 사용하지 않겠다
+                .and()
+            /**
+             * 예외처리 핸들러
+             */
+            .exceptionHandling()   //AccessDenied 예외처리 핸들러
+                .accessDeniedHandler(accessDeniedHandler())
+                .and()
+        ;
+    }
+
+
 
 }

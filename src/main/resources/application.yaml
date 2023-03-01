@@ -1,16 +1,10 @@
 spring:
   application:
     name: spring security 01
-  thymeleaf:
-    cache: true
   messages:
     basename: i18n/messages
     encoding: UTF-8
     cache-duration: PT1H
-  session:
-    store-type: jdbc
-    jdbc:
-      initialize-schema: never
   h2:
     console:
       enabled: true
@@ -26,7 +20,7 @@ spring:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
   datasource:
     driver-class-name: org.h2.Driver
-    url: "jdbc:h2:file:./database/spring_security.db;MODE=MYSQL;DB_CLOSE_DELAY=-1"   #inmemory -> file로 사용하기 위해 change
+    url: "jdbc:h2:mem:spring_security;MODE=MYSQL;DB_CLOSE_DELAY=-1"   #h2를 inmemory 기반으로 사용
     username: sa
     password:
     hikari:
@@ -37,13 +31,18 @@ spring:
   sql:
     init:
       platform: h2
-      #mode: default=embedded    h2를 inmemory 사용하면 상관없는데 file기반으로 사용하려면 설정해주어야 초기화 시 관련 테이블이 만들어진다.
-      mode: always
       # 코드가 실행되고 h2 DB 초기화시 관련도니 테이블들이 만들어진다.
-      schema-locations: classpath:sql/schema_new.sql,classpath:org/springframework/session/jdbc/schema-h2.sql
+      schema-locations: classpath:sql/schema_new.sql
       data-locations: classpath:sql/data_new.sql
       encoding: UTF-8
-
-
 server:
   port: 8080
+jwt:
+  #JWT 토큰이 입력되서 들어오는 header 이름을 뜻한다.
+  header: token
+  #JWT 토큰의 발행자 정보
+  issuer: prgrms
+  #JWT 토큰을 만들 떄 토큰의 검증을 할 떄 signature를 만들게 되는데 그때 HSoil 알고리즘 사용 -> 64Byte secret-key필요하여 설정
+  client-secret: EENY5W0eegTf1naQB2eDeyCLl5kRS2b8xa5c4qLdS0hmVjtbvo8tOyhPMcAmtPuQ
+  #토큰 만료 시간 설정
+  expiry-seconds: 60
