@@ -1,6 +1,7 @@
 package com.prgms.devcourse.configures;
 
 import com.prgms.devcourse.jwt.Jwt;
+import com.prgms.devcourse.jwt.JwtAuthenticationFilter;
 import com.prgms.devcourse.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -103,6 +105,11 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        Jwt jwt = getApplicationContext().getBean(Jwt.class);
+        return new JwtAuthenticationFilter(jwtConfigure.getHeader(), jwt);
+    }
+
     /**
      *
      * @param http HttpSecurity:  세부적인 웹 보안기능 설정을 처리할 수 있는 APi를 제공
@@ -136,6 +143,7 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
             .exceptionHandling()   //AccessDenied 예외처리 핸들러
                 .accessDeniedHandler(accessDeniedHandler())
                 .and()
+            .addFilterAfter(jwtAuthenticationFilter(), SecurityContextPersistenceFilter.class) //SecurityContextPersistenceFilter 다음으로 jwtAuthenticationFilter가 들어가게 된다
         ;
     }
 

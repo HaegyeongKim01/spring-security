@@ -23,7 +23,8 @@ public class UserRestController {
 
     /**
      * 보호받는 엔드포인트 - ROLE_USER 또는 ROLE_ADMIN 권한 필요함
-     * @return 사용자명
+     * token값을 헤더에 넣어서 보내면 헤더에서 값을 꺼내서 검사 한 후  username 출력
+     * @return username return 한다.
      */
     @GetMapping(path = "/user/me")
     public String me() {
